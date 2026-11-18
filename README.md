@@ -69,5 +69,9 @@ They run as a separate step (`npm run migrate`, later a Kubernetes Job), never o
 | GET/POST | `/api/tasks/:id/comments` | oldest first, paginated |
 | PATCH/DELETE | `/api/tasks/:id/comments/:commentId` | author edits; author/owner deletes |
 
+## Dashboard API
+`GET /api/dashboard` (bearer token): project counts, workload by status/priority, overdue and due-soon,
+my tasks and next deadlines, and the 15 most recent activity events across your projects.
+
 ## Docs
 - Architecture decisions: [docs/adr](docs/adr)
