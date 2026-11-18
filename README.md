@@ -1,6 +1,17 @@
 # TaskHub: Project & Task Management Platform
 
-Work in progress. Currently: **Slice 1, foundation** (schema, migrations, health endpoints, tests).
+Authenticated users create projects, add teammates, create and assign tasks with priority and deadline, track progress
+on list and board views, comment, search, and monitor everything from a dashboard.
+
+**Live demo:** https://taskhub-4imx.onrender.com (free tier: the first request after idle takes about a minute;
+create an account on the sign-in page). **Start with the technical document:** [docs/TECHNICAL.md](docs/TECHNICAL.md).
+
+| | |
+|---|---|
+| Backend | Node 22, Express, TypeScript (strict), PostgreSQL 16 via plain SQL, versioned migrations |
+| Frontend | React + Vite, served by the API from the same container |
+| Tests | 114 API integration tests on a real Postgres, web unit/component tests, Playwright end-to-end, CI on GitHub Actions |
+| Deployment | Docker Compose, Kubernetes (Kustomize, tested on kind), Render Blueprint for the live demo |
 
 ## Prerequisites
 - Node.js 20+ (developed on 22)
@@ -58,9 +69,11 @@ npx playwright install chromium && npm test             # Playwright's Chromium
 Plain SQL files in `server/migrations/`, named `NNNN_description.sql`, applied in order, each in a
 transaction, and recorded in `schema_migrations` with a checksum. Editing an applied migration is
 refused. Migrations are serialised with a Postgres advisory lock, so concurrent runners are safe.
-They run as a separate step (`npm run migrate`, later a Kubernetes Job), never on app startup.
+They run as a separate step, never inside the app process: `npm run migrate` locally, a one-shot `migrate` service in
+Compose, a Kubernetes Job in `deploy/k8s`. The single-instance Render demo runs them in its start script, just before
+the server (safe for one instance thanks to the lock; see `render.yaml`).
 
-## Auth API (slice 2)
+## Auth API
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/api/auth/register` | `{email, name, password}` returns `{user, accessToken}` and sets the refresh cookie |
@@ -69,7 +82,7 @@ They run as a separate step (`npm run migrate`, later a Kubernetes Job), never o
 | POST | `/api/auth/logout` | revokes the session |
 | GET | `/api/auth/me` | requires `Authorization: Bearer <accessToken>` |
 
-## Projects API (slice 3), all require `Authorization: Bearer <token>`
+## Projects API, all require `Authorization: Bearer <token>`
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/api/projects` | `{name, description?}`; creator becomes owner |
@@ -82,7 +95,7 @@ They run as a separate step (`npm run migrate`, later a Kubernetes Job), never o
 | DELETE | `/api/projects/:id/members/:userId` | owner/admin, or a member leaving |
 | GET | `/api/users?q=` | people picker (2+ chars, max 10) |
 
-## Tasks API (slice 4), all require a bearer token
+## Tasks API, all require a bearer token
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/api/projects/:projectId/tasks` | `{title, description?, priority?, assigneeId?, dueDate?}` |

@@ -101,18 +101,21 @@ migration must run exactly once per release, not once per replica.
 ## Hosted demo on Render (live URL)
 
 `render.yaml` at the repo root is a Render Blueprint: a Docker web service built from the existing `Dockerfile` plus a
-managed PostgreSQL. It was written from Render's documented Blueprint format and **has not been deployed from this
-repository yet**: the first deploy is the test.
+managed PostgreSQL. **Deployed and live at https://taskhub-4imx.onrender.com** (`/healthz` and `/readyz` return 200).
+
+What the first real deploy taught: Render passes the quotes in `dockerCommand` through literally, so
+`sh -c "migrate && start"` exited 127 (`not found`). The start command is now a small script,
+`server/render-start.sh`, which migrates and then `exec`s the server so it still receives SIGTERM directly.
 
 1. Sign in at render.com with the GitHub account that owns the repo.
 2. **New > Blueprint**, pick this repository, review the two resources (`taskhub` web service, `taskhub-db`), **Apply**.
 3. Wait for the build (about 5 minutes). Render shows the public `https://taskhub-....onrender.com` URL.
 4. Load demo data (public demo accounts, safe to run twice):
    `BASE_URL=https://taskhub-....onrender.com node scripts/seed-demo.mjs`
-5. Open the URL and sign in as `demo@taskhub.example` / `demo-password-123`. Put the URL in the top of the README.
+5. Open the URL and sign in as `demo@taskhub.example` / `demo-password-123`.
 
 What the blueprint sets: `DATABASE_URL` from the managed database, a random `JWT_SECRET`, `COOKIE_SECURE=true`
-(HTTPS), `/readyz` as the health check, and migrations in the start command.
+(HTTPS), `/readyz` as the health check, and migrations in the start script.
 
 Honest limits of this hosting choice:
 - **Cold starts:** free web services sleep after a period of inactivity, so the first request can take about a minute.
