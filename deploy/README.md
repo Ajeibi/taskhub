@@ -86,3 +86,28 @@ migration must run exactly once per release, not once per replica.
 - Metrics exist (Prometheus, internal port 9100, scrape annotations and a NetworkPolicy rule for a `monitoring` namespace), but no alerting rules or tracing yet. Next steps: alerts on readiness failures, error rate, p95 latency and pool waiters, and OpenTelemetry traces. The scrape path is unverified without a cluster.
 - TLS certificates (cert-manager) and the registry/push step in CI are environment-specific and not included.
 - No image vulnerability scan or SBOM step in CI yet (add Trivy/Grype).
+
+## Hosted demo on Render (live URL)
+
+`render.yaml` at the repo root is a Render Blueprint: a Docker web service built from the existing `Dockerfile` plus a
+managed PostgreSQL. It was written from Render's documented Blueprint format and **has not been deployed from this
+repository yet**: the first deploy is the test.
+
+1. Sign in at render.com with the GitHub account that owns the repo.
+2. **New > Blueprint**, pick this repository, review the two resources (`taskhub` web service, `taskhub-db`), **Apply**.
+3. Wait for the build (about 5 minutes). Render shows the public `https://taskhub-....onrender.com` URL.
+4. Load demo data (public demo accounts, safe to run twice):
+   `BASE_URL=https://taskhub-....onrender.com node scripts/seed-demo.mjs`
+5. Open the URL and sign in as `demo@taskhub.example` / `demo-password-123`. Put the URL in the top of the README.
+
+What the blueprint sets: `DATABASE_URL` from the managed database, a random `JWT_SECRET`, `COOKIE_SECURE=true`
+(HTTPS), `/readyz` as the health check, and migrations in the start command.
+
+Honest limits of this hosting choice:
+- **Cold starts:** free web services sleep after a period of inactivity, so the first request can take about a minute.
+  Open the URL shortly before a review (or hit it from an uptime monitor).
+- **Free database:** free Postgres plans have size and lifetime limits. Check Render's current terms and the expiry date
+  before submitting.
+- **Single instance:** migrations run at start, which is safe for one instance only (advisory lock plus transactional
+  files). Several replicas need the separate migration step used in `deploy/k8s`.
+- **Per-IP login limits:** Render sits behind a proxy (`trust proxy` is set), so limits apply per client IP.
