@@ -30,6 +30,95 @@ export function ErrorBanner({ error, onRetry }: { error: unknown; onRetry?: () =
 export const PriorityBadge = ({ p }: { p: Priority }) => <span className={`badge prio-${p}`}>{p}</span>;
 export const StatusBadge = ({ s }: { s: Status }) => <span className={`badge status-${s}`}>{STATUS_LABEL[s]}</span>;
 
+// ---- Visual primitives (ClickUp-style) -----------------------------------------------------------
+export const STATUS_COLOR: Record<Status, string> = { todo: 'var(--s-todo)', in_progress: 'var(--s-progress)', in_review: 'var(--s-review)', done: 'var(--s-done)' };
+const PALETTE = ['#7b68ee', '#e15bd5', '#4194f6', '#2fb67c', '#f2a100', '#e5484d', '#14a3b8', '#8b5cf6', '#e0762b', '#5b8def'];
+export function colorFor(key: string): string {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return PALETTE[h % PALETTE.length] as string;
+}
+const initials = (name: string): string => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join('') || '?';
+
+export function Avatar({ name, size }: { name?: string | null; size?: 'sm' | 'lg' }) {
+  if (!name) return <span className={`avatar unassigned ${size ?? ''}`} title="Unassigned" aria-label="Unassigned">+</span>;
+  return <span className={`avatar ${size ?? ''}`} style={{ background: colorFor(name) }} title={name} aria-hidden="true">{initials(name)}</span>;
+}
+export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number }) {
+  return (
+    <span className="avatars" aria-label={`${names.length} members`}>
+      {names.slice(0, max).map((n) => <Avatar key={n} name={n} />)}
+      {names.length > max && <span className="avatar" style={{ background: 'var(--faint)' }}>+{names.length - max}</span>}
+    </span>
+  );
+}
+export const ProjectIcon = ({ name, id, large }: { name: string; id: string; large?: boolean }) => (
+  <span className={`proj-icon${large ? ' lg' : ''}`} style={{ background: colorFor(id) }} aria-hidden="true">{initials(name).slice(0, 1)}</span>
+);
+
+export function StatusIcon({ status, size = 16 }: { status: Status; size?: number }) {
+  const c = STATUS_COLOR[status];
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" aria-hidden="true">
+      {status === 'done' ? (
+        <><circle cx="8" cy="8" r="7" fill={c} /><path d="M4.6 8.2l2.3 2.3 4.5-4.8" fill="none" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></>
+      ) : (
+        <>
+          <circle cx="8" cy="8" r="6.2" fill="none" stroke={c} strokeWidth="1.7" strokeDasharray={status === 'todo' ? '2.6 2.2' : undefined} />
+          {status === 'in_progress' && <path d="M8 8 V3.2 A4.8 4.8 0 0 1 12.8 8 Z" fill={c} />}
+          {status === 'in_review' && <path d="M8 8 V3.2 A4.8 4.8 0 1 1 3.2 8 Z" fill={c} />}
+        </>
+      )}
+    </svg>
+  );
+}
+export const StatusPill = ({ s, count }: { s: Status; count?: number }) => (
+  <span className="status-pill" style={{ background: STATUS_COLOR[s] }}>{STATUS_LABEL[s]}{count !== undefined && <span style={{ opacity: .85 }}> {count}</span>}</span>
+);
+
+const PRIORITY_COLOR: Record<Priority, string> = { low: 'var(--p-low)', medium: 'var(--p-medium)', high: 'var(--p-high)', urgent: 'var(--p-urgent)' };
+export function PriorityFlag({ p, label = true }: { p: Priority; label?: boolean }) {
+  return (
+    <span className="flag" title={`${p} priority`}>
+      <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 14V2.5h8.6l-1.7 3 1.7 3H4.6V14z" fill={PRIORITY_COLOR[p]} /></svg>
+      {label && p}
+    </span>
+  );
+}
+
+/** "Today", "Tomorrow", "Yesterday", else "Nov 20". */
+export function fmtShortDate(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(`${iso.slice(0, 10)}T00:00:00`);
+  const days = Math.round((d.getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  if (days === -1) return 'Yesterday';
+  return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+}
+export function DueDate({ iso, overdue }: { iso: string | null; overdue?: boolean }) {
+  if (!iso) return <span className="due">—</span>;
+  const days = Math.round((new Date(`${iso.slice(0, 10)}T00:00:00`).getTime() - new Date(new Date().toDateString()).getTime()) / 86_400_000);
+  return <span className={`due${overdue ? ' late' : days <= 2 && days >= 0 ? ' soon' : ''}`}>{fmtShortDate(iso)}</span>;
+}
+
+/** Right-hand slide-over (task details). Escape and backdrop click close it. */
+export function SlideOver({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    ref.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
+  }, [onClose]);
+  return (
+    <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="slideover" role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} ref={ref}>{children}</div>
+    </div>
+  );
+}
+
 export function ProgressBar({ counts }: { counts: TaskCounts }) {
   const pct = counts.total === 0 ? 0 : Math.round((counts.done / counts.total) * 100);
   return (

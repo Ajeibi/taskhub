@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, PRIORITIES, STATUS_LABEL, type Dashboard as Data } from '../api';
-import { describeEvent, ErrorBanner, fmtDate, fmtDateTime, PriorityBadge, Spinner } from '../ui';
+import { useAuth } from '../auth';
+import { Avatar, describeEvent, DueDate, ErrorBanner, fmtDateTime, PriorityFlag, Spinner, StatusIcon } from '../ui';
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: 'bad' | 'warn' | 'good' }) {
+function Stat({ label, value, tone }: { label: string; value: number; tone?: 'bad' | 'warn' | 'good' | 'info' }) {
   return <div className={`stat ${tone ?? ''}`}><strong>{value}</strong><span>{label}</span></div>;
 }
 
@@ -22,22 +23,29 @@ function Bars({ rows }: { rows: Array<{ label: string; value: number; cls: strin
   );
 }
 
+const greeting = (): string => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<unknown>(null);
   const load = useCallback(() => { setError(null); api<Data>('/api/dashboard').then(setData).catch(setError); }, []);
   useEffect(load, [load]);
 
-  if (error) return <ErrorBanner error={error} onRetry={load} />;
-  if (!data) return <Spinner />;
+  if (error) return <div className="page-body"><ErrorBanner error={error} onRetry={load} /></div>;
+  if (!data) return <div className="page-body"><Spinner /></div>;
   const { projects, tasks, mine, upcoming, recentActivity } = data;
 
   return (
-    <>
-      <h1>Dashboard</h1>
+    <div className="page-body">
+      <div className="home-title">
+        <h1>{greeting()}, {user?.name.split(' ')[0]}</h1>
+        <p className="muted">Here is what is happening across your projects.</p>
+      </div>
+
       <section aria-label="Overview" className="stats">
-        <Stat label="Active projects" value={projects.active} />
-        <Stat label="Open tasks" value={tasks.total - tasks.byStatus.done} />
+        <Stat label="Active projects" value={projects.active} tone="info" />
+        <Stat label="Open tasks" value={tasks.total - tasks.byStatus.done} tone="info" />
         <Stat label="Overdue" value={tasks.overdue} tone={tasks.overdue ? 'bad' : undefined} />
         <Stat label="Due in 7 days" value={tasks.dueNext7Days} tone={tasks.dueNext7Days ? 'warn' : undefined} />
         <Stat label="Unassigned" value={tasks.unassigned} />
@@ -57,9 +65,15 @@ export default function Dashboard() {
             <ul className="list">
               {upcoming.map((t) => (
                 <li key={t.id}>
-                  <Link to={`/projects/${t.projectId}?task=${t.id}`}>{t.title}</Link>
-                  <span className="muted small"> {t.projectName}</span>
-                  <span className="right"><PriorityBadge p={t.priority} /> <span className={t.isOverdue ? 'overdue' : 'muted small'}>{fmtDate(t.dueDate)}</span></span>
+                  <div className="deadline">
+                    <StatusIcon status={t.status} />
+                    <div className="grow">
+                      <Link to={`/projects/${t.projectId}?task=${t.id}`}>{t.title}</Link>
+                      <div className="muted small">{t.projectName}</div>
+                    </div>
+                    <PriorityFlag p={t.priority} label={false} />
+                    <DueDate iso={t.dueDate} overdue={t.isOverdue} />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -82,18 +96,21 @@ export default function Dashboard() {
 
       <section className="card">
         <h2>Recent activity</h2>
-        {recentActivity.length === 0 ? <p className="muted">No activity yet. <Link to="/projects">Create a project</Link> to get started.</p> : (
+        {recentActivity.length === 0 ? <p className="muted">No activity yet. <Link to="/projects?new=1">Create a project</Link> to get started.</p> : (
           <ul className="list feed">
             {recentActivity.map((e) => (
               <li key={e.id}>
-                <span>{describeEvent(e)}</span>
-                <span className="muted small"> in <Link to={`/projects/${e.project.id}`}>{e.project.name}</Link></span>
-                <span className="right muted small">{fmtDateTime(e.createdAt)}</span>
+                <Avatar name={e.actor?.name ?? '?'} />
+                <div className="grow">
+                  {describeEvent(e)}
+                  <span className="muted small"> in <Link to={`/projects/${e.project.id}`}>{e.project.name}</Link></span>
+                </div>
+                <span className="when muted small">{fmtDateTime(e.createdAt)}</span>
               </li>
             ))}
           </ul>
         )}
       </section>
-    </>
+    </div>
   );
 }
