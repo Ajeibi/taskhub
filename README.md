@@ -23,10 +23,19 @@ npm run dev
 ```
 Check it: `GET /healthz` (liveness) and `GET /readyz` (readiness, verifies the DB).
 
+## Frontend (React + Vite, plain CSS)
+```bash
+cd web && npm install
+npm run dev        # http://localhost:5173, proxies /api to the backend on :8080
+npm run build      # typecheck + production build into web/dist
+```
+Start the API first (`cd server && npm run dev`). Create an account on the sign-in page and you are in.
+
 ## Tests
 ```bash
 cd server && npm test        # rebuilds taskhub_test from the real migrations, then runs everything
 npm run typecheck
+cd ../web && npm test        # API client / session-refresh unit tests
 ```
 
 ## Database migrations
