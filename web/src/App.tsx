@@ -7,6 +7,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import Projects from './pages/Projects';
 import Tasks from './pages/Tasks';
 import { ProjectsProvider, useProjects } from './projects-context';
+import { toggleTheme, currentTheme } from './theme';
 import { Avatar, ProjectIcon, Spinner } from './ui';
 
 const Icon = ({ d }: { d: string }) => (
@@ -16,6 +17,7 @@ const Icon = ({ d }: { d: string }) => (
 function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const { user, logout } = useAuth();
   const { projects, loading } = useProjects();
+  const [theme, setTheme] = useState(currentTheme());
   const cls = ({ isActive }: { isActive: boolean }) => `sb-link${isActive ? ' active' : ''}`;
   return (
     <aside className={`sidebar${open ? ' open' : ''}`} aria-label="Sidebar" onClick={(e) => { if ((e.target as HTMLElement).closest('a')) onNavigate(); }}>
@@ -35,7 +37,8 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
       <div className="sb-user">
         <Avatar name={user?.name} size="lg" />
         <div className="who"><b>{user?.name}</b><span className="muted small">{user?.role === 'admin' ? 'Admin' : 'Member'}</span></div>
-        <button className="ghost right small" onClick={() => void logout()}>Sign out</button>
+        <button className="ghost right small" aria-label="Toggle dark mode" title="Toggle dark mode" onClick={() => { toggleTheme(); setTheme(currentTheme()); }}>{theme === 'dark' ? '☀' : '☾'}</button>
+        <button className="ghost small" onClick={() => void logout()}>Sign out</button>
       </div>
     </aside>
   );

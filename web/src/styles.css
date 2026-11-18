@@ -9,8 +9,9 @@
   --radius: 8px; --shadow: 0 1px 2px rgba(20, 24, 40, .06); --shadow-lg: 0 12px 40px rgba(20, 24, 40, .22);
   font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.45; font-size: 14px;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Light is the default. Dark only when the user picks it (sidebar toggle, remembered in localStorage). */
+:root[data-theme="dark"] {
+  & {
     --bg: #1c1e26; --bg-soft: #171920; --sidebar: #15171d; --surface: #232630; --hover: #2a2d38;
     --text: #e7e9ee; --muted: #9ba1b0; --faint: #707686; --border: #2f3340; --border-strong: #3d4252;
     --primary: #8f7ff5; --primary-hover: #a193f7; --primary-soft: #2b2749; --primary-text: #fff;

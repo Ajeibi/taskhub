@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './auth';
 import './styles.css';
+import { applyStoredTheme } from './theme';
+
+applyStoredTheme(); // before first render, so there is no flash of the wrong theme
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
