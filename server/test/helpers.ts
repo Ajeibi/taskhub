@@ -1,7 +1,24 @@
 import pg from 'pg';
+import type { Config } from '../src/config.js';
 
 export const testUrl = (): string =>
   process.env.TEST_DATABASE_URL ?? 'postgres://taskhub:taskhub@localhost:5432/taskhub_test';
+
+export function testConfig(overrides: Partial<Config> = {}): Config {
+  return {
+    NODE_ENV: 'test',
+    PORT: 0,
+    LOG_LEVEL: 'silent',
+    DATABASE_URL: testUrl(),
+    DB_POOL_MAX: 4,
+    JWT_SECRET: 'test-secret-test-secret-test-secret-123',
+    ACCESS_TOKEN_TTL_SECONDS: 900,
+    REFRESH_TOKEN_TTL_DAYS: 7,
+    COOKIE_SECURE: false,
+    AUTH_RATE_LIMIT_MAX: 1000,
+    ...overrides,
+  };
+}
 
 export function testPool(): pg.Pool {
   return new pg.Pool({ connectionString: testUrl(), max: 4 });

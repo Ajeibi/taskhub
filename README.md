@@ -35,5 +35,14 @@ transaction, and recorded in `schema_migrations` with a checksum. Editing an app
 refused. Migrations are serialised with a Postgres advisory lock, so concurrent runners are safe.
 They run as a separate step (`npm run migrate`, later a Kubernetes Job), never on app startup.
 
+## Auth API (slice 2)
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/auth/register` | `{email, name, password}` returns `{user, accessToken}` and sets the refresh cookie |
+| POST | `/api/auth/login` | `{email, password}` |
+| POST | `/api/auth/refresh` | uses the refresh cookie; rotates it |
+| POST | `/api/auth/logout` | revokes the session |
+| GET | `/api/auth/me` | requires `Authorization: Bearer <accessToken>` |
+
 ## Docs
 - Architecture decisions: [docs/adr](docs/adr)

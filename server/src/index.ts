@@ -6,7 +6,7 @@ import { createLogger } from './logger.js';
 const config = loadConfig();
 const logger = createLogger(config.LOG_LEVEL, config.NODE_ENV);
 const db = createPool(config.DATABASE_URL, config.DB_POOL_MAX);
-const app = createApp({ db, logger });
+const app = createApp({ db, logger, config });
 
 const server = app.listen(config.PORT, () => logger.info({ port: config.PORT }, 'server listening'));
 

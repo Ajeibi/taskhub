@@ -3,15 +3,18 @@ import express, { type ErrorRequestHandler, type Express } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
 import { pinoHttp } from 'pino-http';
+import type { Config } from './config.js';
 import type { Db } from './db.js';
 import { AppError, notFound } from './errors.js';
+import { authRouter } from './modules/auth/auth.routes.js';
 
 export interface AppDeps {
   db: Db;
   logger: Logger;
+  config: Config;
 }
 
-export function createApp({ db, logger }: AppDeps): Express {
+export function createApp({ db, logger, config }: AppDeps): Express {
   const app = express();
   app.disable('x-powered-by');
   // Behind an ingress/load balancer; needed later for correct client IPs in rate limiting.
@@ -48,6 +51,8 @@ export function createApp({ db, logger }: AppDeps): Express {
       res.status(503).json({ status: 'unavailable' });
     }
   });
+
+  app.use('/api/auth', authRouter(db, config));
 
   app.use((_req, _res, next) => next(notFound('Route')));
 
