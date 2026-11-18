@@ -1,4 +1,4 @@
-import { forbidden, notFound } from '../../errors.js';
+import { conflict, forbidden, notFound } from '../../errors.js';
 import type { AuthUser } from '../auth/tokens.js';
 import type { Queryable } from '../activity/activity.js';
 
@@ -42,6 +42,11 @@ export async function requireProject(q: Queryable, projectId: string, user: Auth
   if (user.role === 'admin') return { project, role: member_role ?? 'admin' };
   if (!member_role) throw notFound('Project');
   return { project, role: member_role };
+}
+
+/** Archived projects are read-only: no new or changed tasks and comments. */
+export function requireWritable(access: ProjectAccess): void {
+  if (access.project.status === 'archived') throw conflict('This project is archived and read-only');
 }
 
 /** Owner-level actions: edit/delete the project, manage members. Admins have the same power. */

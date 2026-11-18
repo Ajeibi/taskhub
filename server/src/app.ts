@@ -8,6 +8,7 @@ import type { Db } from './db.js';
 import { AppError, notFound } from './errors.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { projectsRouter } from './modules/projects/projects.routes.js';
+import { projectTasksRouter, tasksRouter } from './modules/tasks/tasks.routes.js';
 import { usersRouter } from './modules/users/users.routes.js';
 
 export interface AppDeps {
@@ -56,7 +57,9 @@ export function createApp({ db, logger, config }: AppDeps): Express {
 
   app.use('/api/auth', authRouter(db, config));
   app.use('/api/users', usersRouter(db, config));
+  app.use('/api/projects/:projectId/tasks', projectTasksRouter(db, config));
   app.use('/api/projects', projectsRouter(db, config));
+  app.use('/api/tasks', tasksRouter(db, config));
 
   app.use((_req, _res, next) => next(notFound('Route')));
 

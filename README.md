@@ -57,5 +57,17 @@ They run as a separate step (`npm run migrate`, later a Kubernetes Job), never o
 | DELETE | `/api/projects/:id/members/:userId` | owner/admin, or a member leaving |
 | GET | `/api/users?q=` | people picker (2+ chars, max 10) |
 
+## Tasks API (slice 4), all require a bearer token
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/projects/:projectId/tasks` | `{title, description?, priority?, assigneeId?, dueDate?}` |
+| GET | `/api/projects/:projectId/tasks` | filters: `q, status, priority, assignee (me/none/uuid), overdue, limit, cursor` |
+| GET | `/api/tasks` | same filters across all your projects (+ `projectId`) |
+| GET | `/api/tasks/:id` | detail with comment count |
+| PATCH | `/api/tasks/:id` | any field + required `version`; `assigneeId`/`dueDate` accept `null` |
+| DELETE | `/api/tasks/:id` | creator, owner or admin; soft delete |
+| GET/POST | `/api/tasks/:id/comments` | oldest first, paginated |
+| PATCH/DELETE | `/api/tasks/:id/comments/:commentId` | author edits; author/owner deletes |
+
 ## Docs
 - Architecture decisions: [docs/adr](docs/adr)
