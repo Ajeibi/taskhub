@@ -44,5 +44,18 @@ They run as a separate step (`npm run migrate`, later a Kubernetes Job), never o
 | POST | `/api/auth/logout` | revokes the session |
 | GET | `/api/auth/me` | requires `Authorization: Bearer <accessToken>` |
 
+## Projects API (slice 3), all require `Authorization: Bearer <token>`
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/api/projects` | `{name, description?}`; creator becomes owner |
+| GET | `/api/projects` | `?q=&status=&limit=&cursor=`; returns `{items, nextCursor}` with task counts |
+| GET | `/api/projects/:id` | detail: members, task counts, `myRole` |
+| PATCH | `/api/projects/:id` | owner/admin; requires `version` (409 if stale) |
+| DELETE | `/api/projects/:id` | owner/admin; soft delete |
+| GET/POST | `/api/projects/:id/members` | POST `{email}` (owner/admin) |
+| PATCH | `/api/projects/:id/members/:userId` | `{role:"owner"}` transfers ownership |
+| DELETE | `/api/projects/:id/members/:userId` | owner/admin, or a member leaving |
+| GET | `/api/users?q=` | people picker (2+ chars, max 10) |
+
 ## Docs
 - Architecture decisions: [docs/adr](docs/adr)
