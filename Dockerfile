@@ -35,6 +35,7 @@ COPY --from=prod-deps /app/server/node_modules ./node_modules
 COPY --from=server-build /app/server/dist ./dist
 COPY server/package.json ./
 COPY server/migrations ./migrations
+COPY server/render-start.sh ./render-start.sh
 COPY --from=web-build /web/dist /app/web/dist
 
 # Never run as root. The numeric UID (the `node` user) lets Kubernetes verify runAsNonRoot.

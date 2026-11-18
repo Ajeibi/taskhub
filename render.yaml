@@ -18,7 +18,7 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    dockerCommand: sh -c "node dist/migrate-cli.js && node dist/index.js"
+    dockerCommand: sh render-start.sh   # migrate, then exec the server; a script because Render keeps quotes literally
     healthCheckPath: /readyz          # 200 only when the database is reachable
     envVars:
       - key: DATABASE_URL
