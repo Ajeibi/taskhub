@@ -83,6 +83,6 @@ migration must run exactly once per release, not once per replica.
 ## 6. Production gaps (stated honestly)
 - Postgres in the `local` overlay is a single throwaway pod. Production needs managed or operator-run Postgres (HA, PITR backups, tested restores).
 - Secrets must come from a secret manager; the checked-in Secret is development-only.
-- No metrics/tracing yet (only structured logs). Next steps: `/metrics` (Prometheus), alerts on readiness failures, error rate and p95 latency, and OpenTelemetry traces.
+- Metrics exist (Prometheus, internal port 9100, scrape annotations and a NetworkPolicy rule for a `monitoring` namespace), but no alerting rules or tracing yet. Next steps: alerts on readiness failures, error rate, p95 latency and pool waiters, and OpenTelemetry traces. The scrape path is unverified without a cluster.
 - TLS certificates (cert-manager) and the registry/push step in CI are environment-specific and not included.
 - No image vulnerability scan or SBOM step in CI yet (add Trivy/Grype).

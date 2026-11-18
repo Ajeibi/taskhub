@@ -31,7 +31,7 @@ export function TaskFilters({ value, onChange, withStatus }: { value: Filters; o
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => onChange({ ...value, [k]: v });
   return (
     <div className="toolbar" role="search" aria-label="Filter tasks">
-      <input type="search" placeholder="Search tasks…" aria-label="Search tasks" value={value.q} onChange={(e) => set('q', e.target.value)} />
+      <input type="search" placeholder="Search tasksâ€¦" aria-label="Search tasks" value={value.q} onChange={(e) => set('q', e.target.value)} />
       {withStatus && (
         <select aria-label="Status" value={value.status} onChange={(e) => set('status', e.target.value)}>
           <option value="">Any status</option>
@@ -63,7 +63,7 @@ export function TaskRow({ task, showProject, onOpen, onStatus }: {
       </button>
       <div className="grow">
         <button className="title" onClick={() => onOpen(task)}>{task.title}</button>
-        {showProject && <div className="sub"><Link to={`/projects/${task.projectId}`}>{task.projectName}</Link> · {STATUS_LABEL[task.status]}</div>}
+        {showProject && <div className="sub"><Link to={`/projects/${task.projectId}`}>{task.projectName}</Link> Â· {STATUS_LABEL[task.status]}</div>}
       </div>
       <div className="assignee-cell"><Avatar name={task.assignee?.name} /><span>{task.assignee?.name ?? ''}</span></div>
       <DueDate iso={task.dueDate} overdue={task.isOverdue} />
@@ -132,6 +132,7 @@ export function TaskPanel({ taskId, onClose, onChanged, onDeleted }: {
   const [description, setDescription] = useState('');
   const [error, setError] = useState<unknown>(null);
   const [newComment, setNewComment] = useState('');
+  const [editing, setEditing] = useState<{ id: string; body: string } | null>(null);
 
   const latest = useRef<TaskDetail | null>(null); // newest copy, so queued saves always use the current version
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -169,7 +170,7 @@ export function TaskPanel({ taskId, onClose, onChanged, onDeleted }: {
     return queue.current;
   }
   async function remove() {
-    if (!task || !window.confirm(`Delete “${task.title}”?`)) return;
+    if (!task || !window.confirm(`Delete â€œ${task.title}â€?`)) return;
     try { await api(`/api/tasks/${task.id}`, { method: 'DELETE' }); onDeleted(task.id); onClose(); } catch (e) { setError(e); }
   }
   async function addComment(e: FormEvent) {
@@ -177,6 +178,15 @@ export function TaskPanel({ taskId, onClose, onChanged, onDeleted }: {
     try {
       const c = await api<Comment>(`/api/tasks/${taskId}/comments`, { method: 'POST', body: { body: newComment } });
       setComments((prev) => [...prev, c]); setNewComment('');
+    } catch (err) { setError(err); }
+  }
+  async function saveComment(e: FormEvent) {
+    e.preventDefault();
+    if (!editing) return;
+    try {
+      const c = await api<Comment>(`/api/tasks/${taskId}/comments/${editing.id}`, { method: 'PATCH', body: { body: editing.body } });
+      setComments((prev) => prev.map((x) => (x.id === c.id ? c : x)));
+      setEditing(null);
     } catch (err) { setError(err); }
   }
   async function removeComment(id: string) {
@@ -190,7 +200,7 @@ export function TaskPanel({ taskId, onClose, onChanged, onDeleted }: {
         {task && <><StatusIcon status={task.status} /><span className="muted small">in <Link to={`/projects/${task.projectId}`} onClick={onClose}>{task.projectName}</Link></span></>}
         <span className="spacer" />
         {task && !readOnly && (task.creator.id === user?.id || canModerate) && <button className="ghost danger-text small" onClick={() => void remove()}>Delete</button>}
-        <button className="icon" onClick={onClose} aria-label="Close">×</button>
+        <button className="icon" onClick={onClose} aria-label="Close">Ã—</button>
       </div>
       <div className="so-body">
         {!task ? (error ? <ErrorBanner error={error} onRetry={() => void load()} /> : <Spinner />) : (
@@ -226,11 +236,11 @@ export function TaskPanel({ taskId, onClose, onChanged, onDeleted }: {
                 </select>
               </dd>
               <dt>Created</dt>
-              <dd className="muted small">{fmtDate(task.createdAt)} by {task.creator.name}{task.completedAt && <> · completed {fmtDate(task.completedAt)}</>}</dd>
+              <dd className="muted small">{fmtDate(task.createdAt)} by {task.creator.name}{task.completedAt && <> Â· completed {fmtDate(task.completedAt)}</>}</dd>
             </dl>
 
             <h3>Description</h3>
-            <textarea className="desc" aria-label="Description" placeholder="Add a description…" value={description} disabled={readOnly} maxLength={10000}
+            <textarea className="desc" aria-label="Description" placeholder="Add a descriptionâ€¦" value={description} disabled={readOnly} maxLength={10000}
               onChange={(e) => setDescription(e.target.value)}
               onBlur={() => { if (description !== task.description) void save({ description }); }} />
 
@@ -242,15 +252,23 @@ export function TaskPanel({ taskId, onClose, onChanged, onDeleted }: {
                   <Avatar name={c.author.name} size="lg" />
                   <div className="grow">
                     <b>{c.author.name}</b> <span className="muted small">{fmtDateTime(c.createdAt)}{c.edited ? ' (edited)' : ''}</span>
-                    {!readOnly && (c.author.id === user?.id || canModerate) && <button className="link right small" onClick={() => void removeComment(c.id)}>Delete</button>}
-                    <p className="pre">{c.body}</p>
+                    {!readOnly && (c.author.id === user?.id || canModerate) && <button className="link right small danger-text" onClick={() => void removeComment(c.id)}>Delete</button>}
+                    {!readOnly && c.author.id === user?.id && editing?.id !== c.id && <button className="link right small" style={{ marginRight: '.7rem' }} onClick={() => setEditing({ id: c.id, body: c.body })}>Edit</button>}
+                    {editing?.id === c.id ? (
+                      <form className="composer" onSubmit={(e) => void saveComment(e)}>
+                        <input autoFocus aria-label="Edit comment" value={editing.body} maxLength={5000} required
+                          onChange={(e) => setEditing({ id: c.id, body: e.target.value })} onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); setEditing(null); } }} />
+                        <button className="primary">Save</button>
+                        <button type="button" onClick={() => setEditing(null)}>Cancel</button>
+                      </form>
+                    ) : <p className="pre">{c.body}</p>}
                   </div>
                 </div>
               ))}
               {!readOnly && (
                 <form onSubmit={addComment} className="composer">
                   <Avatar name={user?.name} size="lg" />
-                  <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a comment…" aria-label="New comment" maxLength={5000} required />
+                  <input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a commentâ€¦" aria-label="New comment" maxLength={5000} required />
                   <button className="primary">Comment</button>
                 </form>
               )}

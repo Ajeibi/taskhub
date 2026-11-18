@@ -31,7 +31,7 @@ Browser (React SPA)  ->  Express API (stateless, N replicas)  ->  PostgreSQL
 | **Keyset (cursor) pagination, no total counts** | Cost stays constant at any depth. Measured at 30,301 rows deep: 0.27 ms keyset vs 15.8 ms OFFSET. | No "page 7 of 40" and no jump-to-page. Acceptable for feeds and lists. |
 | **Postgres full-text search** (generated `tsvector` + GIN) | Findable records without a new service to run. | Less relevance tuning than a search engine. Revisit if search becomes central. |
 | **Short-lived JWT + rotating refresh token** | The 15-minute access token lives only in memory (nothing persistent for XSS to steal). The 7-day refresh token is an httpOnly cookie, stored hashed, single-use, with reuse detection that revokes the whole token family. | More moving parts than a long-lived token. Worth it for a multi-user product. |
-| **Password hashing: scrypt** (Node built-in) | Memory-hard, no native dependency. Login does constant-time work even for unknown emails (no user enumeration). | Slow by design, which is also why the test suite takes ~95 s. |
+| **Password hashing: scrypt** (Node built-in) | Memory-hard, no native dependency. Login does constant-time work even for unknown emails (no user enumeration). | Slow by design (~32 MiB per hash). The test run lowers the cost via `SCRYPT_N`; production refuses to start with a weak value. |
 | **Dashboard cached 30 s per user** | The task aggregate scales with project size (measured 76 ms in a 30k-task project). A short cache fixes it cheaply. | Counts can be up to 30 s stale, and the cache is per pod. Next step if needed: maintained per-project counters. |
 | **Optimistic-UI-free frontend** | The UI re-fetches after changes instead of guessing server state. Simple and always correct. | One extra round trip per change. |
 
@@ -71,8 +71,14 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 
 ## 6. Evidence
 
-- **Automated tests:** 110 backend tests against a real PostgreSQL (schema constraints, migrations, auth and token reuse,
-  authorization, concurrency conflicts, pagination, dashboard, static serving) and 7 frontend tests (token refresh).
+- **Automated tests:** 114 backend tests against a real PostgreSQL (schema constraints, migrations, auth and token reuse,
+  authorization, concurrency conflicts, pagination, dashboard, metrics, static serving) and 15 frontend tests (token
+  refresh, task row, login, and the task panel's queued saves).
+- **Observability:** structured JSON logs with a validated request id; Prometheus metrics (request latency by route
+  pattern, DB pool saturation, process stats) on an internal port (9100) that the Ingress does not route.
+- **Multi-tab safety:** two tabs refreshing the shared cookie at once are treated as a race (short grace window,
+  client retries once), not as token theft, so users are not logged out everywhere. Replays after the window still
+  revoke the whole token family.
 - **Load data:** 500,000 tasks, 700,000 activity rows, five projects with ~30,000 tasks each. Most endpoints: p50 10-27 ms,
   p95 <= 45 ms. One hot spot found (dashboard) and fixed with the cache. Concurrent load of 50 clients: 0 errors, throughput
   plateaus around one Node process, as expected. Details and limits: [PERFORMANCE.md](PERFORMANCE.md).
@@ -86,12 +92,14 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 - **Performance numbers** come from one laptop with a warm cache and the load generator in the same process. They show
   what scales, not production capacity.
 - **Not built:** email invitations and verification, password reset, notifications, file attachments, task dependencies
-  and subtasks, comment editing in the UI, per-project custom statuses, metrics/tracing, and end-to-end browser tests.
+  and subtasks, per-project custom statuses, distributed tracing and alerting rules, and end-to-end browser tests.
+- **A refresh replay inside the grace window (10 s) is not flagged as theft.** The replayer gets nothing (401), but the
+  event is not escalated. This is the deliberate cost of not logging users out when two tabs race.
 
 ## 8. What I would do next
 
 1. Apply the manifests to a real cluster (kind or managed) and run a rolling-update and pod-kill test.
-2. Add Prometheus metrics and tracing; alert on readiness failures and p95 latency.
+2. Add tracing and alerting rules on the existing metrics (readiness failures, error rate, p95 latency, pool waiters).
 3. Replace per-pod rate limit and cache with Redis; add maintained per-project counters if dashboards grow heavier.
 4. Email invitations and password reset; notifications driven by the activity log.
 5. Browser end-to-end tests for the main flows (sign up, create project, assign, comment).
