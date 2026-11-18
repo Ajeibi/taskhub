@@ -91,3 +91,6 @@ my tasks and next deadlines, and the 15 most recent activity events across your 
 
 ## Docs
 - Architecture decisions: [docs/adr](docs/adr)
+- **Technical document (start here):** [docs/TECHNICAL.md](docs/TECHNICAL.md)
+- Performance measurements: [docs/PERFORMANCE.md](docs/PERFORMANCE.md)
+- Deployment and Kubernetes: [deploy/README.md](deploy/README.md)
