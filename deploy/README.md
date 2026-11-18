@@ -6,8 +6,19 @@ What is verified vs. not (be precise about this in the review):
 |---|---|
 | `Dockerfile` (multi-stage, non-root, read-only FS) | **Built and run** locally: migrations from an empty DB, health probes, UI, API all work in the container |
 | `docker-compose.yml` (db + migrate job + app) | **Run end to end** locally |
-| `deploy/k8s` manifests (Kustomize base + `local` overlay) | **Rendered and checked offline** (15 objects, namespaces, images, labels). **Not applied to a cluster**: none was available on the build machine |
-| GitHub Actions `ci.yml` | Written, **not executed** (no GitHub remote yet) |
+| `deploy/k8s` manifests (Kustomize base + `local` overlay) | **Applied to a real single-node cluster** (Docker Desktop kind, k8s 1.36) with the staged procedure below; results in "Cluster test results". HPA metrics, Ingress controller and Prometheus scrape were **not** exercised |
+| GitHub Actions `ci.yml` | **Ran green** on GitHub (server, web, e2e, image jobs) |
+
+### Cluster test results (measured, local single-node cluster)
+| Test | Result |
+|---|---|
+| Staged apply (prereq, migrate Job, app) | Worked; migration Job completed, 2 replicas ready, PDB and HPA created |
+| API through the Service | `/readyz` ready, register, create project, SPA served |
+| Kill a pod and `rollout restart` under load (5 workers, 120 s, in-cluster, `/readyz`) | **23,505 ok, 1 failed** (a 3 s client timeout). Close to, but not literally, zero-downtime |
+| NetworkPolicy | Pod in `default` namespace blocked; pod in `ingress-nginx` namespace reached the app (200) |
+| Database outage (Postgres scaled to 0 for about 35 s) | Both app pods went not-ready, **0 restarts**, removed from Service endpoints; recovered by themselves once Postgres returned |
+| Bad release (`taskhub:broken-release`) | New pod stuck in `ImagePullBackOff`, never ready; the 2 old pods kept serving `/readyz`; `kubectl rollout undo` restored `taskhub:local` |
+| HPA | Created, but CPU target shows `<unknown>`: kind has no metrics-server, so autoscaling was not demonstrated |
 
 ## 1. Run with Docker Compose (one command)
 ```bash

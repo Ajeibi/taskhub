@@ -87,7 +87,7 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 
 ## 7. Known limitations (stated honestly)
 
-- **Kubernetes manifests were validated by rendering only.** No cluster was available; they have not been applied.
+- **Kubernetes was exercised on a single-node local cluster only** (Docker Desktop, kind), not on a multi-node or cloud cluster. Results are in `deploy/README.md`. Not verified there: HPA scaling (no metrics-server), the Ingress controller path, the Prometheus scrape path, and behaviour across several nodes.
 - **CI:** GitHub Actions ran green on the first push (server tests, web tests and build, browser E2E on Linux Chromium,
   image build and manifest render). It does not push images, scan them, or deploy anywhere.
 - **Rate limiting and the dashboard cache are per pod.** With many replicas, limits are approximate. A shared store
