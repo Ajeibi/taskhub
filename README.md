@@ -3,8 +3,9 @@
 Authenticated users create projects, add teammates, create and assign tasks with priority and deadline, track progress
 on list and board views, comment, search, and monitor everything from a dashboard.
 
-**Live demo:** https://taskhub-4imx.onrender.com (free tier: the first request after idle takes about a minute;
-create an account on the sign-in page). **Start with the technical document:** [docs/TECHNICAL.md](docs/TECHNICAL.md).
+**Live demo:** https://taskhub-4imx.onrender.com (free tier: the first request after idle takes about a minute).
+Sign in as `demo@taskhub.example` / `demo-password-123` (teammates `amara@` and `david@taskhub.example`, same
+password; public demo accounts), or create your own account. **Start with the technical document:** [docs/TECHNICAL.md](docs/TECHNICAL.md).
 
 | | |
 |---|---|
