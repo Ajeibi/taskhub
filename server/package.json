@@ -13,7 +13,9 @@
     "migrate": "tsx --env-file-if-exists=.env src/migrate-cli.ts",
     "migrate:prod": "node dist/migrate-cli.js",
     "typecheck": "tsc --noEmit -p tsconfig.test.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "perf:seed": "tsx scripts/perf-seed.ts",
+    "perf:run": "tsx scripts/perf-run.ts"
   },
   "dependencies": {
     "express": "^4.22.3",
