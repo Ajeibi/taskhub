@@ -60,7 +60,7 @@ Implemented the first option: `DASHBOARD_CACHE_TTL_SECONDS` (default 30, `0` dis
 - Keyed by user + role; caches the in-flight promise, so concurrent requests share one query (no stampede).
 - Failures are never cached. Bounded to 5,000 entries (oldest evicted).
 - **Per pod**: with N replicas a user can see up to N different snapshots, each at most 30 s old.
-- **Stale after your own writes**: a task you just changed may not show in the counts for up to 30 s. The activity
-  feed and task lists are not cached, so they stay current.
+- **Stale after your own writes**: a task you just changed may not show in the counts for up to 30 s. The whole dashboard
+  response is cached, including the activity feed; task lists, task detail and comments are not, so they stay current.
 - The perf runner and the other tests set the TTL to 0 so they measure and assert the real queries.
 - Still the right next step if this is not enough: maintained per-project counters.
