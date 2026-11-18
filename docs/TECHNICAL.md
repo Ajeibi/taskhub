@@ -88,14 +88,14 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 ## 7. Known limitations (stated honestly)
 
 - **Kubernetes manifests were validated by rendering only.** No cluster was available; they have not been applied.
-- **CI workflow has not run** (no remote repository yet).
+- **CI:** GitHub Actions ran green on the first push (server tests, web tests and build, browser E2E on Linux Chromium,
+  image build and manifest render). It does not push images, scan them, or deploy anywhere.
 - **Rate limiting and the dashboard cache are per pod.** With many replicas, limits are approximate. A shared store
   (Redis) fixes both.
 - **Performance numbers** come from one laptop with a warm cache and the load generator in the same process. They show
   what scales, not production capacity.
 - **Not built:** email invitations and verification, password reset, notifications, file attachments, task dependencies
-  and subtasks, per-project custom statuses, and distributed tracing and alerting rules. The E2E suite passes locally in Edge; its CI job has not run yet.
-- **A refresh replay inside the grace window (10 s) is not flagged as theft.** The replayer gets nothing (401), but the
+  and subtasks, per-project custom statuses, and distributed tracing and alerting rules.- **A refresh replay inside the grace window (10 s) is not flagged as theft.** The replayer gets nothing (401), but the
   event is not escalated. This is the deliberate cost of not logging users out when two tabs race.
 
 ## 8. What I would do next
