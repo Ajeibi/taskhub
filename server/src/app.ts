@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
 import express, { type ErrorRequestHandler, type Express } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
@@ -62,6 +63,29 @@ export function createApp({ db, logger, config }: AppDeps): Express {
   app.use('/api/projects', projectsRouter(db, config));
   app.use('/api/tasks', tasksRouter(db, config));
   app.use('/api/dashboard', dashboardRouter(db, config));
+
+  // Production: serve the built single-page app from the same origin as the API (one container, no CORS,
+  // and the SameSite=Strict refresh cookie works). Fingerprinted assets are cached forever; index.html never,
+  // so a new deploy is picked up immediately.
+  if (config.STATIC_DIR) {
+    const dir = path.resolve(config.STATIC_DIR);
+    app.use(
+      express.static(dir, {
+        index: false,
+        setHeaders: (res, file) => {
+          res.setHeader(
+            'Cache-Control',
+            file.includes(`${path.sep}assets${path.sep}`) ? 'public, max-age=31536000, immutable' : 'no-cache',
+          );
+        },
+      }),
+    );
+    // SPA fallback for client-side routes (/projects/123). Never for /api: unknown API paths must stay JSON 404s.
+    app.get(/^\/(?!api(\/|$)).*/, (_req, res, next) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(path.join(dir, 'index.html'), (err) => err && next());
+    });
+  }
 
   app.use((_req, _res, next) => next(notFound('Route')));
 

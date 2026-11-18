@@ -6,10 +6,17 @@ Work in progress. Currently: **Slice 1, foundation** (schema, migrations, health
 - Node.js 20+ (developed on 22)
 - Docker Desktop (for PostgreSQL)
 
-## Run locally
+## Quick start: everything in containers
 ```bash
-# 1. Start PostgreSQL 16 (creates `taskhub` and `taskhub_test` databases on first start)
-docker compose up -d --wait
+docker compose up --build      # database -> migrations -> app
+# open http://localhost:8080  (create an account on the sign-in page)
+```
+Kubernetes manifests, CI and the deployment/scaling/failure discussion: [deploy/README.md](deploy/README.md).
+
+## Run locally for development
+```bash
+# 1. Start only PostgreSQL 16 (creates `taskhub` and `taskhub_test` databases on first start)
+docker compose up -d db --wait
 
 # 2. Configure and install
 cp .env.example server/.env

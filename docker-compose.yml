@@ -1,4 +1,6 @@
-# Local development database. The app itself is added to this file in a later slice.
+# Local environment.
+#   Everything in containers (what a reviewer runs):   docker compose up --build
+#   Only the database, API/UI run with npm (daily dev): docker compose up -d db
 services:
   db:
     image: postgres:16-alpine   # >= 15 required: schema uses ON DELETE SET NULL (column list)
@@ -16,6 +18,40 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # One-shot job: applies schema migrations, then exits. Same image as the app, different command.
+  # The app only starts after this finished successfully (the Kubernetes equivalent is a Job).
+  migrate:
+    build: .
+    image: taskhub:local
+    command: ["node", "dist/migrate-cli.js"]
+    environment:
+      DATABASE_URL: postgres://taskhub:taskhub@db:5432/taskhub
+      JWT_SECRET: ${JWT_SECRET:-local-dev-only-secret-change-me-0123456789}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build: .
+    image: taskhub:local
+    ports:
+      - "8080:8080"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://taskhub:taskhub@db:5432/taskhub
+      # Override with a real secret outside local development: JWT_SECRET=... docker compose up
+      JWT_SECRET: ${JWT_SECRET:-local-dev-only-secret-change-me-0123456789}
+      COOKIE_SECURE: "false"   # plain http on localhost; must be true behind HTTPS
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    read_only: true            # the app never writes to its filesystem
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    restart: unless-stopped
 
 volumes:
   pgdata:

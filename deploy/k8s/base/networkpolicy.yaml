@@ -1,0 +1,50 @@
+# Default deny, then allow only what the app needs. (Enforced when the CNI supports NetworkPolicy.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels: { taskhub.io/stage: prereq }
+  name: taskhub-default-deny
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels: { taskhub.io/stage: prereq }
+  name: taskhub-app
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: taskhub }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:                                   # only the ingress controller may reach the app
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
+      ports: [{ port: 8080 }]
+  egress:
+    - to:                                     # the app (and migration job) may reach only Postgres...
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: postgres }
+      ports: [{ port: 5432 }]
+    - to:                                     # ...and DNS
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels: { k8s-app: kube-dns }
+      ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+---
+# Postgres accepts connections only from TaskHub pods.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels: { taskhub.io/stage: prereq }
+  name: taskhub-postgres
+spec:
+  podSelector:
+    matchLabels: { app.kubernetes.io/name: postgres }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app.kubernetes.io/name: taskhub }
+      ports: [{ port: 5432 }]

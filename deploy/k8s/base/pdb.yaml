@@ -1,0 +1,10 @@
+# Voluntary disruptions (node drains, cluster upgrades) may never take the last healthy pod away.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  labels: { taskhub.io/stage: app }
+  name: taskhub
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: taskhub, app.kubernetes.io/component: app }

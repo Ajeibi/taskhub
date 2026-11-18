@@ -18,6 +18,8 @@ const schema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
   // Refresh cookie 'Secure' flag. Defaults to on in production (HTTPS), off for local http.
   COOKIE_SECURE: bool.optional(),
+  // Directory with the built frontend. Set in the container image; unset in development (Vite serves the UI).
+  STATIC_DIR: z.string().min(1).optional(),
   // Max login/register attempts per IP per 15 minutes.
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
 });

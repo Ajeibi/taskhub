@@ -1,0 +1,15 @@
+**/node_modules
+**/dist
+**/coverage
+.git
+.github
+.claude
+**/.env
+**/*.log
+docs
+deploy
+README.md
+server/test
+server/vitest.config.ts
+server/tsconfig.test.json
+web/src/**/*.test.ts

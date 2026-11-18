@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# The base describes the application only. It deliberately does NOT contain the database or secrets:
+# production uses a managed Postgres and a secret manager; the `local` overlay adds throwaway versions.
+resources:
+  - serviceaccount.yaml
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+  - hpa.yaml
+  - pdb.yaml
+  - networkpolicy.yaml
+  - migrate-job.yaml
