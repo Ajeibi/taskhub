@@ -51,3 +51,16 @@ turns into queueing latency, not errors. That is the expected shape; it is the r
      but more write-path code and a drift risk to test.
    - *Leave as is* and rely on the documented evolution path (ADR 0005). Acceptable at this scale.
 3. Admin dashboard should not aggregate the whole platform live; if admins matter, serve it from counters or a cache.
+
+## Decision taken: per-user dashboard cache
+
+Implemented the first option: `DASHBOARD_CACHE_TTL_SECONDS` (default 30, `0` disables) in
+`server/src/modules/dashboard/dashboard.service.ts`. Properties and trade-offs:
+
+- Keyed by user + role; caches the in-flight promise, so concurrent requests share one query (no stampede).
+- Failures are never cached. Bounded to 5,000 entries (oldest evicted).
+- **Per pod**: with N replicas a user can see up to N different snapshots, each at most 30 s old.
+- **Stale after your own writes**: a task you just changed may not show in the counts for up to 30 s. The activity
+  feed and task lists are not cached, so they stay current.
+- The perf runner and the other tests set the TTL to 0 so they measure and assert the real queries.
+- Still the right next step if this is not enough: maintained per-project counters.

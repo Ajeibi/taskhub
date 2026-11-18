@@ -7,7 +7,7 @@ import { DashboardService } from './dashboard.service.js';
 
 export function dashboardRouter(db: Db, config: Config): Router {
   const router = Router();
-  const service = new DashboardService(db);
+  const service = new DashboardService(db, config.DASHBOARD_CACHE_TTL_SECONDS * 1000);
   router.use(authenticate(config));
 
   router.get('/', asyncHandler(async (req, res) => {

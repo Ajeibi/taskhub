@@ -22,6 +22,9 @@ const schema = z.object({
   STATIC_DIR: z.string().min(1).optional(),
   // Max login/register attempts per IP per 15 minutes.
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
+  // Per-user dashboard cache lifetime (seconds, per pod). 0 disables. The dashboard's task aggregate is the one
+  // query whose cost grows with project size (see docs/PERFORMANCE.md).
+  DASHBOARD_CACHE_TTL_SECONDS: z.coerce.number().int().min(0).max(600).default(30),
 });
 
 export type Config = Omit<z.infer<typeof schema>, 'COOKIE_SECURE'> & { COOKIE_SECURE: boolean };

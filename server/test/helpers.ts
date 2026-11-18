@@ -16,6 +16,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     REFRESH_TOKEN_TTL_DAYS: 7,
     COOKIE_SECURE: false,
     AUTH_RATE_LIMIT_MAX: 1000,
+    DASHBOARD_CACHE_TTL_SECONDS: 0, // tests assert fresh data after writes; the cache has its own test
     ...overrides,
   };
 }

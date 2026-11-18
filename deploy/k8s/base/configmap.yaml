@@ -12,6 +12,7 @@ data:
   ACCESS_TOKEN_TTL_SECONDS: "900"
   REFRESH_TOKEN_TTL_DAYS: "7"
   AUTH_RATE_LIMIT_MAX: "20"
+  DASHBOARD_CACHE_TTL_SECONDS: "30"   # per pod; trades <=30s staleness for not re-aggregating big projects
   # Pool size PER POD. Total DB connections = replicas x this. With HPA max 10 pods: 10 x 8 = 80,
   # which must stay below Postgres max_connections (default 100). Beyond that, add PgBouncer.
   DB_POOL_MAX: "8"

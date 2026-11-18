@@ -172,3 +172,24 @@ describe('dashboard', () => {
     expect(d.recentActivity.length).toBeGreaterThan(0);
   });
 });
+
+describe('dashboard cache', () => {
+  it('serves the cached result within the TTL, shares concurrent misses, and recomputes after expiry', async () => {
+    const { DashboardService } = await import('../src/modules/dashboard/dashboard.service.js');
+    let calls = 0;
+    const db = { query: async (sql: string) => {
+      if (sql.includes('FROM tasks t') && sql.includes('count(*)::int AS total')) calls++;
+      return { rows: sql.includes('count(*)::int AS total') ? [Object.fromEntries(
+        ['total','todo','in_progress','in_review','done','p_low','p_medium','p_high','p_urgent','overdue','due_soon','unassigned','completed_7d','my_open','my_overdue','my_due_soon'].map((k) => [k, 0]))] : [] };
+    } } as never;
+    const svc = new DashboardService(db, 50);
+    const user = { id: '00000000-0000-0000-0000-000000000001', role: 'user' } as never;
+    const [a, b] = await Promise.all([svc.get(user), svc.get(user)]);
+    expect(a).toBe(b);
+    await svc.get(user);
+    expect(calls).toBe(1);
+    await new Promise((r) => setTimeout(r, 70));
+    await svc.get(user);
+    expect(calls).toBe(2);
+  });
+});

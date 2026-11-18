@@ -33,14 +33,34 @@ const UPCOMING_SIZE = 5;
  * Everything is scoped to the caller's projects (platform admins see all). Four independent, indexed
  * queries run in parallel; none loads rows into the app to count them.
  *
- * Scaling note: the task aggregate is O(tasks in the caller's active projects). That is cheap per user
- * (index-only scans on (project_id, status)) but is the first thing to cache (e.g. 30s) or replace with
- * maintained counters if a single user ever belongs to very large projects.
+ * Scaling note: the task aggregate is O(tasks in the caller's active projects): measured 76 ms for a member of a
+ * 30k-task project and 217 ms for an admin at 500k tasks (docs/PERFORMANCE.md). Hence the short per-user cache
+ * above. Next step if that is not enough: maintained per-project counters.
  */
 export class DashboardService {
-  constructor(private readonly db: Db) {}
+  // Per-pod, per-user cache of the in-flight/finished result. Caching the PROMISE means concurrent requests for
+  // the same user share one query (no stampede). Bounded so it cannot grow without limit.
+  private readonly cache = new Map<string, { at: number; value: Promise<DashboardDto> }>();
+  private static readonly MAX_ENTRIES = 5000;
 
-  async get(user: AuthUser): Promise<DashboardDto> {
+  constructor(private readonly db: Db, private readonly ttlMs = 0) {}
+
+  /** Cached wrapper. Staleness is bounded by ttlMs and is per pod; a TTL of 0 disables caching. */
+  get(user: AuthUser): Promise<DashboardDto> {
+    if (this.ttlMs <= 0) return this.compute(user);
+    const key = `${user.id}:${user.role}`;
+    const hit = this.cache.get(key);
+    if (hit && Date.now() - hit.at < this.ttlMs) return hit.value;
+
+    const value = this.compute(user);
+    this.cache.delete(key); // re-insert so Map order tracks recency of write
+    this.cache.set(key, { at: Date.now(), value });
+    value.catch(() => { if (this.cache.get(key)?.value === value) this.cache.delete(key); }); // never cache failures
+    if (this.cache.size > DashboardService.MAX_ENTRIES) this.cache.delete(this.cache.keys().next().value as string);
+    return value;
+  }
+
+  private async compute(user: AuthUser): Promise<DashboardDto> {
     const isAdmin = user.role === 'admin';
     // Membership restriction fragments. $1 is always the caller's id.
     const projectScope = isAdmin ? '' : 'JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = $1';
