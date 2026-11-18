@@ -50,3 +50,24 @@ describe('health endpoints', () => {
     expect(testUrl()).toContain('taskhub_test'); // guard: never run against the dev database
   });
 });
+
+describe('metrics', () => {
+  const db = testPool();
+  afterAll(() => db.end());
+
+  it('records latency by route PATTERN (not raw url) and exposes DB pool gauges', async () => {
+    const app = createApp({ db, logger, config: testConfig() });
+    await db.query('TRUNCATE users CASCADE');
+    const reg = await request(app).post('/api/auth/register').send({ email: 'm@example.com', name: 'M', password: 'correct horse battery' });
+    const auth = { authorization: `Bearer ${reg.body.accessToken}` };
+    await request(app).get('/api/tasks/11111111-1111-4111-8111-111111111111').set(auth); // 404, route matched
+    await request(app).get('/api/tasks/22222222-2222-4222-8222-222222222222').set(auth);
+    await request(app).get('/definitely/not/a/route');
+    const text = await (app.locals.metricsRegistry as import('prom-client').Registry).metrics();
+    expect(text).toMatch(/http_request_duration_seconds_count\{method="GET",route="\/api\/tasks\/:id",status="404"\} 2/);
+    expect(text).toContain('route="unmatched"');
+    expect(text).not.toContain('1111-4111'); // ids must never become label values
+    expect(text).toContain('db_pool_clients_waiting');
+    expect(text).toContain('process_cpu_user_seconds_total');
+  });
+});

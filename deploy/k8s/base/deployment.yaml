@@ -16,6 +16,10 @@ spec:
   template:
     metadata:
       labels: { app.kubernetes.io/name: taskhub, app.kubernetes.io/component: app }
+      annotations:                          # conventional scrape hints (honoured by common Prometheus setups)
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9100"
+        prometheus.io/path: /metrics
     spec:
       serviceAccountName: taskhub
       automountServiceAccountToken: false   # the app never talks to the Kubernetes API
@@ -39,6 +43,7 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - { name: http, containerPort: 8080 }
+            - { name: metrics, containerPort: 9100 }   # internal only: not in the Service, not routed by the Ingress
           envFrom:
             - configMapRef: { name: taskhub-config }
             - secretRef: { name: taskhub-secrets }   # DATABASE_URL, JWT_SECRET

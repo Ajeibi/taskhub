@@ -7,6 +7,7 @@ import { pinoHttp } from 'pino-http';
 import type { Config } from './config.js';
 import type { Db } from './db.js';
 import { AppError, notFound } from './errors.js';
+import { createMetrics } from './metrics.js';
 import { authRouter } from './modules/auth/auth.routes.js';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes.js';
 import { projectsRouter } from './modules/projects/projects.routes.js';
@@ -40,6 +41,9 @@ export function createApp({ db, logger, config }: AppDeps): Express {
       autoLogging: { ignore: (req) => req.url === '/healthz' || req.url === '/readyz' }, // probes are noise
     }),
   );
+  const metrics = createMetrics(db);
+  app.locals.metricsRegistry = metrics.registry; // served on a separate internal port by index.ts, never on the public one
+  app.use(metrics.middleware);
   app.use(express.json({ limit: '100kb' }));
 
   // Liveness: "is the process responsive?" Must NOT touch the DB, otherwise a DB outage

@@ -22,6 +22,10 @@ spec:
         - namespaceSelector:
             matchLabels: { kubernetes.io/metadata.name: ingress-nginx }
       ports: [{ port: 8080 }]
+    - from:                                   # Prometheus (assumed to run in a "monitoring" namespace) scrapes metrics
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: monitoring }
+      ports: [{ port: 9100 }]
   egress:
     - to:                                     # the app (and migration job) may reach only Postgres...
         - podSelector:

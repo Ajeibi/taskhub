@@ -17,6 +17,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     REFRESH_REUSE_GRACE_SECONDS: 0, // strict by default so the theft-detection test is deterministic; the race test overrides
     COOKIE_SECURE: false,
     AUTH_RATE_LIMIT_MAX: 1000,
+    METRICS_PORT: 0,
     DASHBOARD_CACHE_TTL_SECONDS: 0, // tests assert fresh data after writes; the cache has its own test
     ...overrides,
   };

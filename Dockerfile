@@ -39,7 +39,7 @@ COPY --from=web-build /web/dist /app/web/dist
 
 # Never run as root. The numeric UID (the `node` user) lets Kubernetes verify runAsNonRoot.
 USER 1000:1000
-EXPOSE 8080
+EXPOSE 8080 9100
 
 # Docker-level liveness for plain `docker run` / compose. Kubernetes uses its own probes instead.
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \

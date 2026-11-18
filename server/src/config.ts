@@ -23,6 +23,8 @@ const schema = z.object({
   COOKIE_SECURE: bool.optional(),
   // Directory with the built frontend. Set in the container image; unset in development (Vite serves the UI).
   STATIC_DIR: z.string().min(1).optional(),
+  // Prometheus /metrics listens on its own port so it is never reachable through the public ingress. 0 disables.
+  METRICS_PORT: z.coerce.number().int().min(0).max(65535).default(9100),
   // Max login/register attempts per IP per 15 minutes.
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().min(1).default(20),
   // Per-user dashboard cache lifetime (seconds, per pod). 0 disables. The dashboard's task aggregate is the one
