@@ -73,7 +73,9 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 
 - **Automated tests:** 114 backend tests against a real PostgreSQL (schema constraints, migrations, auth and token reuse,
   authorization, concurrency conflicts, pagination, dashboard, metrics, static serving) and 15 frontend tests (token
-  refresh, task row, login, and the task panel's queued saves).
+  refresh, task row, login, and the task panel's queued saves), plus 8 browser end-to-end tests (Playwright, real UI
+  against the Docker stack): sign-up and session restore, wrong password, project and task lifecycle with comments,
+  quick-add, Board drag-and-drop, search, and a two-user collaboration flow proving outsiders get "not found".
 - **Observability:** structured JSON logs with a validated request id; Prometheus metrics (request latency by route
   pattern, DB pool saturation, process stats) on an internal port (9100) that the Ingress does not route.
 - **Multi-tab safety:** two tabs refreshing the shared cookie at once are treated as a race (short grace window,
@@ -92,7 +94,7 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 - **Performance numbers** come from one laptop with a warm cache and the load generator in the same process. They show
   what scales, not production capacity.
 - **Not built:** email invitations and verification, password reset, notifications, file attachments, task dependencies
-  and subtasks, per-project custom statuses, distributed tracing and alerting rules, and end-to-end browser tests.
+  and subtasks, per-project custom statuses, and distributed tracing and alerting rules. The E2E suite passes locally in Edge; its CI job has not run yet.
 - **A refresh replay inside the grace window (10 s) is not flagged as theft.** The replayer gets nothing (401), but the
   event is not escalated. This is the deliberate cost of not logging users out when two tabs race.
 
@@ -102,4 +104,4 @@ Full detail and the "verified vs not verified" table: [deploy/README.md](../depl
 2. Add tracing and alerting rules on the existing metrics (readiness failures, error rate, p95 latency, pool waiters).
 3. Replace per-pod rate limit and cache with Redis; add maintained per-project counters if dashboards grow heavier.
 4. Email invitations and password reset; notifications driven by the activity log.
-5. Browser end-to-end tests for the main flows (sign up, create project, assign, comment).
+5. Grow the E2E suite (error states, archived projects, mobile viewport) and run it against every deployment.

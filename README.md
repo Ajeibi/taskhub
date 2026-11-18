@@ -42,7 +42,16 @@ Start the API first (`cd server && npm run dev`). Create an account on the sign-
 ```bash
 cd server && npm test        # rebuilds taskhub_test from the real migrations, then runs everything
 npm run typecheck
-cd ../web && npm test        # API client / session-refresh unit tests
+cd ../web && npm test        # API client unit tests + React component tests
+```
+
+Browser end-to-end tests (Playwright) drive the real UI against the running Docker stack. Each test signs up its own
+throw-away users, so nothing needs cleaning up:
+```bash
+AUTH_RATE_LIMIT_MAX=1000 docker compose up -d --build   # the suite signs up many users, so lift the login rate limit
+cd e2e && npm install
+npx playwright install chromium && npm test             # Playwright's Chromium
+# or, on Windows, with the Edge you already have (no download):  npm run test:edge
 ```
 
 ## Database migrations

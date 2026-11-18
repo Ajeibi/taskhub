@@ -39,6 +39,30 @@ jobs:
       - run: npm test
       - run: npm run build       # typechecks, then produces the production bundle
 
+  e2e:
+    needs: [server, web]
+    runs-on: ubuntu-latest
+    env:
+      AUTH_RATE_LIMIT_MAX: "1000"       # the suite signs up many users from one IP
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: e2e/package-lock.json }
+      - name: Start the full stack (db, migrations, app)
+        run: docker compose up -d --build --wait app
+      - run: npm ci
+        working-directory: e2e
+      - run: npx playwright install --with-deps chromium
+        working-directory: e2e
+      - run: npm test
+        working-directory: e2e
+      - name: Keep traces and screenshots when a test fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: e2e-results, path: e2e/test-results }
+      - if: always()
+        run: docker compose logs app | tail -100
+
   image:
     needs: [server, web]
     runs-on: ubuntu-latest

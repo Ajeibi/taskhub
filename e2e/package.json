@@ -1,0 +1,13 @@
+{
+  "name": "taskhub-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:edge": "cross-env E2E_CHANNEL=msedge playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "cross-env": "^10.1.0"
+  }
+}

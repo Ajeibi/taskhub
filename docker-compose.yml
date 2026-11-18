@@ -44,6 +44,7 @@ services:
       # Override with a real secret outside local development: JWT_SECRET=... docker compose up
       JWT_SECRET: ${JWT_SECRET:-local-dev-only-secret-change-me-0123456789}
       COOKIE_SECURE: "false"   # plain http on localhost; must be true behind HTTPS
+      AUTH_RATE_LIMIT_MAX: ${AUTH_RATE_LIMIT_MAX:-20}   # the browser E2E suite signs up many users: raise it when running those
     depends_on:
       migrate:
         condition: service_completed_successfully
