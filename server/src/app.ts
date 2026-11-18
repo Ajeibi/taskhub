@@ -31,7 +31,9 @@ export function createApp({ db, logger, config }: AppDeps): Express {
       logger,
       // Correlate a request across logs; honour an upstream id if the ingress set one.
       genReqId: (req, res) => {
-        const id = (req.headers['x-request-id'] as string | undefined) ?? randomUUID();
+        // Honour an upstream id only if it looks like one: it is echoed in a header and written to logs.
+        const incoming = req.headers['x-request-id'];
+        const id = typeof incoming === 'string' && /^[\w.-]{1,64}$/.test(incoming) ? incoming : randomUUID();
         res.setHeader('x-request-id', id);
         return id;
       },

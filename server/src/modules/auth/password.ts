@@ -4,7 +4,10 @@ import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:c
 // cracking), no native add-on to compile in the container, and no third-party dependency.
 // The stored format is self-describing so parameters can be raised later without a migration:
 //   scrypt$N$r$p$saltBase64$hashBase64
-const N = 2 ** 15; // CPU/memory cost (~32 MiB per hash)
+// Cost is fixed in production. Only the test runner lowers it (SCRYPT_N) so the suite is fast; a low value is
+// refused outright when NODE_ENV=production so it can never be deployed by accident.
+const N = Number(process.env.SCRYPT_N ?? 2 ** 15); // CPU/memory cost (~32 MiB per hash at the default)
+if (process.env.NODE_ENV === 'production' && N < 2 ** 15) throw new Error('SCRYPT_N below 32768 is not allowed in production');
 const R = 8;
 const P = 1;
 const KEY_LEN = 64;

@@ -3,6 +3,7 @@ import { rateLimit } from 'express-rate-limit';
 import { z } from 'zod';
 import type { Config } from '../../config.js';
 import type { Db } from '../../db.js';
+import { AppError } from '../../errors.js';
 import { asyncHandler, parse } from '../../http.js';
 import { authenticate, currentUser } from '../../middleware/authenticate.js';
 import { AuthService, type Session } from './auth.service.js';
@@ -82,7 +83,8 @@ export function authRouter(db: Db, config: Config): Router {
       try {
         sendSession(res, 200, await service.refresh(token));
       } catch (err) {
-        res.clearCookie(COOKIE, { ...cookieOptions(), maxAge: undefined });
+        // A rotation race must keep the cookie: the other tab's response has just set the new, valid one.
+        if (!(err instanceof AppError && err.code === 'refresh_race')) res.clearCookie(COOKIE, { ...cookieOptions(), maxAge: undefined });
         throw err;
       }
     }),

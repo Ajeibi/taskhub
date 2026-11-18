@@ -14,6 +14,7 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     JWT_SECRET: 'test-secret-test-secret-test-secret-123',
     ACCESS_TOKEN_TTL_SECONDS: 900,
     REFRESH_TOKEN_TTL_DAYS: 7,
+    REFRESH_REUSE_GRACE_SECONDS: 0, // strict by default so the theft-detection test is deterministic; the race test overrides
     COOKIE_SECURE: false,
     AUTH_RATE_LIMIT_MAX: 1000,
     DASHBOARD_CACHE_TTL_SECONDS: 0, // tests assert fresh data after writes; the cache has its own test

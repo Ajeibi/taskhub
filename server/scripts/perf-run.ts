@@ -14,7 +14,7 @@ import { assertPerfDb, ms, PERF_PASSWORD, PERF_URL } from './perf-lib.js';
 assertPerfDb(PERF_URL);
 const config: Config = {
   NODE_ENV: 'test', PORT: 0, LOG_LEVEL: 'silent', DATABASE_URL: PERF_URL, DB_POOL_MAX: 10,
-  JWT_SECRET: 'perf-secret-perf-secret-perf-secret-0123', ACCESS_TOKEN_TTL_SECONDS: 3600, REFRESH_TOKEN_TTL_DAYS: 1,
+  JWT_SECRET: 'perf-secret-perf-secret-perf-secret-0123', ACCESS_TOKEN_TTL_SECONDS: 3600, REFRESH_TOKEN_TTL_DAYS: 1, REFRESH_REUSE_GRACE_SECONDS: 0,
   COOKIE_SECURE: false, AUTH_RATE_LIMIT_MAX: 1_000_000, DASHBOARD_CACHE_TTL_SECONDS: 0, // measure the real queries, not the cache
 };
 

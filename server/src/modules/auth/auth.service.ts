@@ -83,11 +83,18 @@ export class AuthService {
         family_id: string;
         expires_at: Date;
         revoked_at: Date | null;
-      }>(`SELECT id, user_id, family_id, expires_at, revoked_at FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE`, [
+        just_rotated: boolean;
+      }>(`SELECT id, user_id, family_id, expires_at, revoked_at,
+                 (replaced_by IS NOT NULL AND revoked_at > now() - make_interval(secs => $2)) AS just_rotated
+            FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE`, [
         hashRefreshToken(rawToken),
+        this.config.REFRESH_REUSE_GRACE_SECONDS,
       ]);
       const token = rows[0];
       if (!token) return { kind: 'invalid' as const };
+      // Rotated moments ago: almost certainly a second tab racing the first, whose new cookie is already valid.
+      // Reject this request but do NOT revoke the family (that would log the user out everywhere).
+      if (token.revoked_at && token.just_rotated) return { kind: 'race' as const };
       if (token.revoked_at) {
         await tx.query(`UPDATE refresh_tokens SET revoked_at = now() WHERE family_id = $1 AND revoked_at IS NULL`, [
           token.family_id,
@@ -107,6 +114,7 @@ export class AuthService {
       return { kind: 'ok' as const, session };
     });
     // The reuse branch must COMMIT its revocation, so we throw only after the transaction ended.
+    if (outcome.kind === 'race') throw new AppError(401, 'refresh_race', 'Token was just rotated, retry shortly');
     if (outcome.kind !== 'ok') throw unauthorized('Invalid or expired refresh token');
     return outcome.session;
   }

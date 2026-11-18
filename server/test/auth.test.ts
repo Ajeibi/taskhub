@@ -143,6 +143,38 @@ describe('auth', () => {
       expect(afterReplay.status).toBe(401);
     });
 
+    it('treats a re-use right after rotation as a tab race: 401 but the family and cookie survive', async () => {
+      const lenient = createApp({ db, logger, config: testConfig({ REFRESH_REUSE_GRACE_SECONDS: 10 }) });
+      const reg = await request(lenient).post('/api/auth/register').send(creds);
+      const first = refreshCookie(reg);
+      const second = refreshCookie(await request(lenient).post('/api/auth/refresh').set('cookie', first));
+
+      const race = await request(lenient).post('/api/auth/refresh').set('cookie', first); // the other tab, same old cookie
+      expect(race.status).toBe(401);
+      expect(race.body.error.code).toBe('refresh_race');
+      expect((race.headers['set-cookie'] ?? []) as unknown as string[]).toEqual([]); // must not clear the new cookie
+      // The legitimate descendant still works: nobody was logged out.
+      expect((await request(lenient).post('/api/auth/refresh').set('cookie', second)).status).toBe(200);
+    });
+
+    it('still revokes the family when a rotated token is replayed AFTER the grace window', async () => {
+      const lenient = createApp({ db, logger, config: testConfig({ REFRESH_REUSE_GRACE_SECONDS: 10 }) });
+      const reg = await request(lenient).post('/api/auth/register').send(creds);
+      const first = refreshCookie(reg);
+      const second = refreshCookie(await request(lenient).post('/api/auth/refresh').set('cookie', first));
+      await db.query(`UPDATE refresh_tokens SET revoked_at = now() - interval '1 minute' WHERE revoked_at IS NOT NULL`);
+
+      expect((await request(lenient).post('/api/auth/refresh').set('cookie', first)).status).toBe(401);
+      expect((await request(lenient).post('/api/auth/refresh').set('cookie', second)).status).toBe(401);
+    });
+
+    it('ignores a malformed X-Request-Id instead of echoing it', async () => {
+      const bad = await request(app).get('/healthz').set('x-request-id', 'a b<script>'.padEnd(100, 'x'));
+      expect(bad.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+      const good = await request(app).get('/healthz').set('x-request-id', 'trace-abc.123');
+      expect(good.headers['x-request-id']).toBe('trace-abc.123');
+    });
+
     it('lets only one of two concurrent refreshes with the same token succeed', async () => {
       const reg = await request(app).post('/api/auth/register').send(creds);
       const cookie = refreshCookie(reg);

@@ -66,7 +66,12 @@ let refreshing: Promise<SessionResponse | null> | null = null;
 export function refreshSession(): Promise<SessionResponse | null> {
   refreshing ??= (async () => {
     try {
-      const res = await fetch('/api/auth/refresh', { method: 'POST' });
+      let res = await fetch('/api/auth/refresh', { method: 'POST' });
+      // Another tab rotated the (shared) cookie a moment ago; its response has set the new one, so try again once.
+      if (res.status === 401 && (await res.clone().json().catch(() => null))?.error?.code === 'refresh_race') {
+        await new Promise((r) => setTimeout(r, 300));
+        res = await fetch('/api/auth/refresh', { method: 'POST' });
+      }
       if (!res.ok) { accessToken = null; return null; }
       const session = (await res.json()) as SessionResponse;
       accessToken = session.accessToken;

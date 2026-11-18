@@ -16,6 +16,9 @@ const schema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).default(900), // 15 minutes
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
+  // Two browser tabs can refresh at the same instant, both holding the same single-use cookie. Re-presenting a token
+  // within this many seconds of its rotation is treated as that race (plain 401, family kept), not as theft.
+  REFRESH_REUSE_GRACE_SECONDS: z.coerce.number().int().min(0).max(60).default(10),
   // Refresh cookie 'Secure' flag. Defaults to on in production (HTTPS), off for local http.
   COOKIE_SECURE: bool.optional(),
   // Directory with the built frontend. Set in the container image; unset in development (Vite serves the UI).

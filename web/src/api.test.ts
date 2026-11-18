@@ -26,6 +26,17 @@ describe('api client', () => {
     expect(__test.token()).toBe('tok-2');
   });
 
+  it('retries the refresh once when another tab just rotated the cookie', async () => {
+    fetchMock
+      .mockResolvedValueOnce(json(401, { error: { code: 'unauthorized', message: 'expired' } }))
+      .mockResolvedValueOnce(json(401, { error: { code: 'refresh_race', message: 'retry' } })) // other tab won the race
+      .mockResolvedValueOnce(json(200, { user: {}, accessToken: 'tok-3' })) // second attempt, new cookie
+      .mockResolvedValueOnce(json(200, { items: [] }));
+    await expect(api('/api/projects')).resolves.toEqual({ items: [] });
+    expect(fetchMock.mock.calls.map((c) => c[0])).toEqual(['/api/projects', '/api/auth/refresh', '/api/auth/refresh', '/api/projects']);
+    expect(__test.token()).toBe('tok-3');
+  });
+
   it('shares ONE refresh between parallel requests (refresh tokens are single-use)', async () => {
     let refreshCalls = 0;
     fetchMock.mockImplementation(async (url: string, init: { headers: Record<string, string> }) => {
